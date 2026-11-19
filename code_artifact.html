@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大阪旅行 旅のしおり | Osaka Trip Planner</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans JP & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'sans-serif'],
+            display: ['"Plus Jakarta Sans"', '"Noto Sans JP"', 'sans-serif'],
+          },
+          colors: {
+            osaka: {
+              50: '#fff5f2',
+              100: '#ffe8e0',
+              200: '#ffd0c2',
+              300: '#ffae96',
+              400: '#ff7d57',
+              500: '#f9572a', // 活気ある大阪をイメージしたコーラルオレンジ
+              600: '#e63e12',
+              700: '#c02f0b',
+              800: '#9e290e',
+              900: '#822713',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* タイムラインの縦線 */
+    .timeline-line::before {
+      content: '';
+      position: absolute;
+      top: 1.5rem;
+      bottom: -0.75rem;
+      left: 0.625rem;
+      width: 2px;
+      background-color: #e2e8f0;
+      z-index: 0;
+    }
+    @media (min-width: 768px) {
+      .timeline-line::before {
+        top: 2.25rem;
+        bottom: -1rem;
+        left: 1.125rem;
+      }
+    }
+    .timeline-item:last-child .timeline-line::before {
+      display: none;
+    }
+
+    /* 横スクロールバー非表示（スマホ用タブバーなど） */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 印刷用スタイル */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .print-break-inside-avoid {
+        break-inside: avoid;
+      }
+      .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl {
+        box-shadow: none !important;
+      }
+      .border {
+        border-color: #cbd5e1 !important;
+      }
+      main {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- トースト通知 (alert()の代替) -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-5 right-4 left-4 md:left-auto z-50 flex flex-col items-center md:items-end gap-2 pointer-events-none no-print"></div>
+
+  <!-- ヘッダー（スマホでは高さ・余白を大幅に圧縮） -->
+  <header class="bg-gradient-to-r from-osaka-600 via-osaka-500 to-amber-500 text-white shadow-md sticky top-0 z-30 no-print">
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3.5 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="bg-white/20 backdrop-blur-sm p-1.5 sm:p-2 rounded-lg sm:rounded-xl shrink-0">
+          <i data-lucide="map-pin" class="w-4 h-4 sm:w-6 sm:h-6 text-white"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="hidden sm:inline-block text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA TRIP</span>
+            <!-- 同期ステータス表示 -->
+            <div id="sync-status-badge" class="inline-flex items-center gap-1 bg-black/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
+              <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse"></span>
+              <span id="sync-status-text">接続中...</span>
+            </div>
+          </div>
+          <h1 class="text-sm sm:text-xl font-black tracking-tight leading-tight truncate mt-0.5">大阪旅行 旅のしおり</h1>
+        </div>
+      </div>
+
+      <!-- アクションボタン群（スマホではコンパクトアイコン化） -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- LINEで共有・リンクコピーボタン -->
+        <button onclick="openShareModal()" class="flex items-center gap-1 bg-[#06C755] hover:bg-[#05b34c] active:scale-[0.98] text-white text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-sm transition">
+          <i data-lucide="share-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span>LINE共有</span>
+        </button>
+
+        <button onclick="copyItineraryText()" class="flex items-center gap-1 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs sm:text-sm font-bold p-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl transition backdrop-blur-sm" title="テキスト形式でコピー">
+          <i data-lucide="copy" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span class="hidden md:inline">テキストコピー</span>
+        </button>
+        <button onclick="window.print()" class="hidden sm:flex items-center gap-1.5 bg-white text-osaka-600 hover:bg-osaka-50 text-xs sm:text-sm font-bold px-3 py-2 rounded-xl shadow-sm transition" title="印刷またはPDFとして保存">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span class="hidden md:inline">印刷 / PDF</span>
+        </button>
+        <button onclick="openResetModal()" class="flex items-center gap-1 bg-black/20 hover:bg-black/30 text-white/90 text-xs font-medium p-1.5 sm:px-2.5 sm:py-2 rounded-lg sm:rounded-xl transition" title="確定プランに戻す・リセット">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span class="hidden lg:inline">確定プランに戻す</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ（スマホは下部ナビ分の余白 pb-24 を確保） -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-2.5 sm:px-4 pt-3 sm:pt-6 pb-24 md:pb-8 space-y-3 sm:space-y-6">
+
+    <!-- 1. 旅行タイトル・基本情報＆サマリーカード（スマホでは「持ち物・予算」タブ選択時またはPC表示時に展開、予定表タブではミニバー表示） -->
+    <section id="section-meta-summary" class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 p-3.5 sm:p-6 print-break-inside-avoid">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-5 pb-3.5 sm:pb-5 border-b border-slate-100">
+        <!-- 旅行タイトル編集 -->
+        <div class="flex-1 space-y-1">
+          <label class="text-[11px] font-bold text-slate-400 flex items-center gap-1 no-print">
+            <i data-lucide="edit-3" class="w-3 h-3"></i> 旅行タイトル（タップして編集）
+          </label>
+          <input type="text" id="trip-title" onchange="updateMeta('title', this.value)"
+            class="w-full text-base sm:text-2xl font-black text-slate-800 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-osaka-500 focus:outline-none pb-0.5 transition"
+            placeholder="例：食い倒れ＆USJ満喫！大阪の旅">
+        </div>
+
+        <!-- 日程・目標予算入力 -->
+        <div class="grid grid-cols-2 sm:flex sm:flex-nowrap items-center gap-2 sm:gap-3">
+          <div class="bg-slate-50 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200/70">
+            <label class="block text-[10px] font-bold text-slate-400">出発日</label>
+            <input type="date" id="trip-start-date" onchange="updateMeta('startDate', this.value)"
+              class="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-700 focus:outline-none">
+          </div>
+          <div class="bg-slate-50 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200/70">
+            <label class="block text-[10px] font-bold text-slate-400">帰宅日</label>
+            <input type="date" id="trip-end-date" onchange="updateMeta('endDate', this.value)"
+              class="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-700 focus:outline-none">
+          </div>
+          <div class="col-span-2 bg-osaka-50/70 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl border border-osaka-200/70 sm:w-40">
+            <label class="block text-[10px] font-bold text-osaka-600">目標予算 (円)</label>
+            <div class="flex items-center">
+              <span class="text-xs sm:text-sm font-bold text-osaka-600 mr-1">¥</span>
+              <input type="number" id="trip-budget-target" step="1000" min="0" onchange="updateMeta('budgetTarget', Number(this.value))"
+                class="w-full bg-transparent text-xs sm:text-sm font-black text-slate-800 focus:outline-none" placeholder="80000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- クイックサマリー4指標（スマホではコンパクトな2x2グリッド） -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 pt-3 sm:pt-5">
+        <div class="bg-slate-50 rounded-lg sm:rounded-xl p-2.5 sm:p-3.5 border border-slate-100 flex items-center gap-2.5">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <i data-lucide="calendar-days" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <p class="text-[10px] sm:text-xs font-medium text-slate-500">旅行日数</p>
+            <p class="text-sm sm:text-xl font-black text-slate-800 font-display"><span id="stat-days">5</span><span class="text-[10px] sm:text-xs font-bold text-slate-500 ml-0.5">日間</span></p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 rounded-lg sm:rounded-xl p-2.5 sm:p-3.5 border border-slate-100 flex items-center gap-2.5">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <i data-lucide="compass" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <p class="text-[10px] sm:text-xs font-medium text-slate-500">予定数</p>
+            <p class="text-sm sm:text-xl font-black text-slate-800 font-display"><span id="stat-spots">0</span><span class="text-[10px] sm:text-xs font-bold text-slate-500 ml-0.5">件</span></p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 rounded-lg sm:rounded-xl p-2.5 sm:p-3.5 border border-slate-100 flex items-center gap-2.5">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-osaka-100 text-osaka-600 flex items-center justify-center shrink-0">
+            <i data-lucide="wallet" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[10px] sm:text-xs font-medium text-slate-500">予定費用合計</p>
+            <p class="text-sm sm:text-xl font-black text-slate-800 font-display truncate" id="stat-cost">¥0</p>
+            <p class="text-[10px] font-bold truncate" id="stat-budget-diff"></p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 rounded-lg sm:rounded-xl p-2.5 sm:p-3.5 border border-slate-100 flex items-center gap-2.5">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <i data-lucide="check-circle-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-baseline">
+              <p class="text-[10px] sm:text-xs font-medium text-slate-500">持ち物</p>
+              <span class="text-[11px] sm:text-xs font-black text-emerald-600 font-display" id="stat-checklist-pct">0%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-1.5 sm:h-2 mt-1 overflow-hidden">
+              <div id="stat-checklist-bar" class="bg-emerald-500 h-1.5 sm:h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- メイン2カラムレイアウト（PCは2カラム、スマホはボトムナビでタブ切り替え） -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start">
+
+      <!-- 左カラム：日程別タイムライン (PC: 7カラム分 / スマホ: 「予定表」タブ) -->
+      <div id="mobile-tab-schedule" class="md:col-span-7 space-y-2.5 sm:space-y-4">
+
+        <!-- スマホ用コンパクトステータスバー（タイトル＆合計予算を1行で表示） -->
+        <div class="md:hidden bg-white rounded-xl border border-slate-200/80 px-3 py-2 flex items-center justify-between gap-2 shadow-2xs no-print">
+          <div class="min-w-0 flex-1">
+            <p id="mobile-mini-title" class="text-xs font-black text-slate-800 truncate">年末年始 大阪＆USJ・実家帰省の旅</p>
+          </div>
+          <button onclick="switchMobileTab('budget')" class="shrink-0 flex items-center gap-1.5 bg-osaka-50 text-osaka-700 border border-osaka-200/70 px-2 py-1 rounded-lg text-[11px] font-black">
+            <span>計 <span id="mobile-mini-cost">¥0</span></span>
+            <span class="text-slate-300">|</span>
+            <span class="text-emerald-600">🎒<span id="mobile-mini-check">0%</span></span>
+          </button>
+        </div>
+
+        <!-- 日程タブバー（スマホでは画面上部にピタッと収まるスリム設計） -->
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 p-1.5 sm:p-2 flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar no-print">
+          <div id="day-tabs" class="flex items-center gap-1 sm:gap-1.5">
+            <!-- JSで動的生成 -->
+          </div>
+          <div class="flex items-center gap-1 shrink-0 pl-1 border-l border-slate-100">
+            <button id="btn-all-days-view" onclick="toggleAllDaysView()" class="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-600 hover:bg-slate-100 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition">
+              <i data-lucide="list" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              <span>全日程</span>
+            </button>
+            <button onclick="addDay()" class="flex items-center gap-0.5 text-[11px] sm:text-xs font-bold text-osaka-600 hover:bg-osaka-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition" title="日程を追加">
+              <i data-lucide="plus" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              <span class="hidden sm:inline">日程追加</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 選択中の日のスケジュールカード -->
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 p-3 sm:p-6">
+          <div id="single-day-header" class="flex items-center justify-between gap-2 pb-2.5 sm:pb-4 mb-3 sm:mb-5 border-b border-slate-100">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span id="current-day-badge" class="bg-osaka-500 text-white text-xs sm:text-sm font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg sm:rounded-xl shadow-sm font-display shrink-0">DAY 1</span>
+              <div class="min-w-0">
+                <h2 id="current-day-title" class="text-sm sm:text-lg font-black text-slate-800 truncate">1日目のスケジュール</h2>
+                <p id="current-day-subtotal" class="text-[11px] sm:text-xs font-bold text-slate-400 truncate">この日の予定費用: ¥0</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 no-print">
+              <button id="btn-delete-day" onclick="deleteCurrentDay()" class="text-xs font-bold text-slate-400 hover:text-red-500 p-1.5 sm:px-2.5 sm:py-2 rounded-lg sm:rounded-xl hover:bg-red-50 transition hidden" title="この日を削除">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+              <button onclick="openItemModal()" class="flex items-center gap-1 bg-osaka-500 hover:bg-osaka-600 active:scale-[0.98] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl shadow-sm transition">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                <span>予定追加</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- タイムラインリスト（単日表示：スマホでは1画面に4〜5件収まるスリム設計） -->
+          <div id="itinerary-list" class="space-y-2 sm:space-y-4">
+            <!-- JSで動的生成 -->
+          </div>
+
+          <!-- 全日程一覧ビュー（全体表示モード用） -->
+          <div id="all-days-view-container" class="hidden space-y-3 sm:space-y-6">
+            <!-- JSで動的生成 -->
+          </div>
+
+          <!-- 印刷時のみ表示される全日程まとめ -->
+          <div id="print-all-days-container" class="hidden print-only space-y-6 mt-6"></div>
+        </div>
+      </div>
+
+      <!-- 右カラム：大阪おすすめスポット & 持ち物チェックリスト (PC: 5カラム分 / スマホ: ボトムナビで切替) -->
+      <div class="md:col-span-5 space-y-4 sm:space-y-6 no-print">
+
+        <!-- 大阪おすすめ定番スポット クイック追加 (スマホ: 「スポット追加」タブ) -->
+        <section id="mobile-tab-spots" class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 p-3.5 sm:p-5">
+          <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="flex items-center gap-2">
+              <span class="bg-amber-100 text-amber-600 p-1.5 rounded-lg">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+              </span>
+              <h3 class="font-black text-slate-800 text-sm sm:text-base">大阪おすすめスポットから追加</h3>
+            </div>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 mb-2.5 sm:mb-3">タップすると現在選択中の <span id="quick-add-target-day" class="font-bold text-osaka-600">DAY 1</span> に追加されます。</p>
+
+          <!-- エリアフィルター -->
+          <div id="spot-area-filters" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-2.5">
+            <!-- JSで動的生成 -->
+          </div>
+
+          <!-- スポット一覧 -->
+          <div id="recommended-spots-list" class="space-y-2 md:max-h-80 md:overflow-y-auto pr-0.5">
+            <!-- JSで動的生成 -->
+          </div>
+        </section>
+
+        <!-- 持ち物・準備チェックリスト (スマホ: 「持ち物・予算」タブ) -->
+        <section id="mobile-tab-checklist" class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 p-3.5 sm:p-5">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <div class="flex items-center gap-2">
+              <span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg">
+                <i data-lucide="luggage" class="w-4 h-4"></i>
+              </span>
+              <h3 class="font-black text-slate-800 text-sm sm:text-base">持ち物・準備リスト</h3>
+            </div>
+            <span id="checklist-count-badge" class="text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">0 / 0</span>
+          </div>
+
+          <!-- 新規アイテム追加フォーム -->
+          <form onsubmit="handleAddChecklist(event)" class="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+            <select id="new-check-category" class="bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-osaka-500">
+              <option value="必需品">必需品</option>
+              <option value="衣類">衣類</option>
+              <option value="ガジェット">ガジェット</option>
+              <option value="その他">その他</option>
+            </select>
+            <input type="text" id="new-check-text" placeholder="持ち物を追加..." required
+              class="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-2 text-xs sm:text-sm focus:outline-none focus:border-osaka-500">
+            <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 sm:px-3.5 py-2 rounded-lg sm:rounded-xl transition shrink-0">
+              追加
+            </button>
+          </form>
+
+          <!-- チェックリスト本体 -->
+          <div id="checklist-container" class="space-y-3 md:max-h-96 md:overflow-y-auto pr-0.5">
+            <!-- JSで動的生成 -->
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- スマホ専用 固定ボトムナビゲーションバー（768px未満で表示） -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_12px_rgba(0,0,0,0.05)] no-print">
+    <button id="nav-btn-schedule" onclick="switchMobileTab('schedule')" class="flex-1 flex flex-col items-center justify-center py-1 rounded-xl text-osaka-600 bg-osaka-50/80 font-black transition">
+      <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">予定表</span>
+    </button>
+    <button id="nav-btn-spots" onclick="switchMobileTab('spots')" class="flex-1 flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 hover:text-slate-800 font-bold transition">
+      <i data-lucide="sparkles" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">スポット追加</span>
+    </button>
+    <button id="nav-btn-budget" onclick="switchMobileTab('budget')" class="flex-1 flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 hover:text-slate-800 font-bold transition">
+      <i data-lucide="luggage" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">持ち物・予算</span>
+    </button>
+  </nav>
+
+  <!-- 予定追加・編集モーダル -->
+  <div id="item-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="modal-title" class="font-black text-slate-800 text-lg">予定を追加</h3>
+        <button onclick="closeItemModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+          <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">開始時間 <span class="text-osaka-500">*</span></label>
+            <input type="time" id="item-time" required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-osaka-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">終了時間（任意）</label>
+            <input type="time" id="item-end-time"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-osaka-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">カテゴリー</label>
+          <select id="item-category"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-osaka-500">
+            <option value="sightseeing">🏯 観光・体験</option>
+            <option value="gourmet">🐙 グルメ・食べ歩き</option>
+            <option value="transport">🚃 移動・アクセス</option>
+            <option value="hotel">🏨 ホテル・宿泊</option>
+            <option value="shopping">🛍️ ショッピング</option>
+            <option value="other">📌 その他</option>
+          </select>
+        </div>
+
+        <div>
+  <!-- LINE共有・共同編集リンクモーダル -->
+  <div id="share-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 bg-gradient-to-r from-[#06C755] to-emerald-500 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="users" class="w-5 h-5"></i>
+          <h3 class="font-black text-base sm:text-lg">一緒に行く子と共有・共同編集</h3>
+        </div>
+        <button onclick="closeShareModal()" class="text-white/80 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+          下の専用リンクをLINEで送ると、相手も同じしおり画面を開いて<strong class="text-slate-800">リアルタイムで一緒に予定や持ち物を編集</strong>できます！
+        </p>
+
+        <!-- 共有URLボックス -->
+        <div class="space-y-1.5">
+          <label class="block text-[11px] font-bold text-slate-400">共同編集用 専用URL（ルームID: <span id="share-room-id-label" class="font-mono text-slate-600"></span>）</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="share-url-input" readonly
+              class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-700 focus:outline-none select-all">
+            <button onclick="copyShareUrl()" class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>コピー</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LINEで直接送るボタン -->
+        <a id="line-share-direct-link" href="#" target="_blank" rel="noopener noreferrer"
+          class="w-full flex items-center justify-center gap-2 bg-[#06C755] hover:bg-[#05b34c] active:scale-[0.99] text-white font-black text-sm py-3.5 px-4 rounded-xl shadow-md transition">
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+          <span>LINEアプリを開いて送る</span>
+        </a>
+
+        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-[11px] text-amber-800 leading-relaxed">
+          💡 <strong>ヒント：</strong> プレビュー環境で開いている場合、ブラウザのURLバーではなく上の「専用URL」をコピーして送ると同じルームにつながります。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- リセット確認モーダル (confirm()の代替) -->
+  <div id="reset-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center gap-3 text-osaka-600">
+        <div class="bg-osaka-100 p-2.5 rounded-xl">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-black text-lg text-slate-800">確定プランに戻す・初期化</h3>
+      </div>
+      <p class="text-sm text-slate-600 leading-relaxed">
+        入力済みの「12/29〜1/2 確定プラン」の初期状態に戻しますか？それともすべて白紙にしますか？
+      </p>
+      <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+        <button onclick="closeResetModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+          キャンセル
+        </button>
+        <button onclick="restoreSampleData()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-osaka-500 hover:bg-osaka-600 text-white transition">
+          12/29〜1/2の確定プランに戻す
+        </button>
+        <button onclick="clearAllData()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-white transition">
+          白紙にする
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==========================================
+    // 1. 定数・マスターデータ定義
+    // ==========================================
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let roomId = null;
+    let unsubscribeRoom = null;
+    let isRemoteUpdate = false;
+
+    const CATEGORIES = {
+      sightseeing: { label: '観光・体験', icon: 'landmark', badgeBg: 'bg-sky-100 text-sky-700 border-sky-200', dotBg: 'bg-sky-500' },
+      gourmet:     { label: 'グルメ',     icon: 'utensils', badgeBg: 'bg-osaka-100 text-osaka-700 border-osaka-200', dotBg: 'bg-osaka-500' },
+      transport:   { label: '移動',       icon: 'train',    badgeBg: 'bg-slate-100 text-slate-700 border-slate-200', dotBg: 'bg-slate-500' },
+      hotel:       { label: 'ホテル',     icon: 'bed-double', badgeBg: 'bg-indigo-100 text-indigo-700 border-indigo-200', dotBg: 'bg-indigo-500' },
+      shopping:    { label: '買い物',     icon: 'shopping-bag', badgeBg: 'bg-pink-100 text-pink-700 border-pink-200', dotBg: 'bg-pink-500' },
+      other:       { label: 'その他',     icon: 'pin',      badgeBg: 'bg-amber-100 text-amber-700 border-amber-200', dotBg: 'bg-amber-500' }
+    };
+
+    // 大阪おすすめ定番スポットマスター（大阪観光①・②の穴埋めに最適）
+    const RECOMMENDED_SPOTS = [
+      { title: '道頓堀・グリコサイン＆たこ焼き食べ比べ', area: 'なんば・心斎橋', category: 'gourmet', cost: 2000, memo: 'くくる・わなか・十八番などを食べ歩き。戎橋で記念撮影！' },
+      { title: '大阪城公園・天守閣（年末年始の開館日要確認）', area: '大阪城・京橋', category: 'sightseeing', cost: 600, memo: '天守閣からの眺めが最高。公園内の散策も気持ちいい。' },
+      { title: '新世界・通天閣＆本場の串カツ', area: '天王寺・新世界', category: 'gourmet', cost: 3000, memo: 'ソースの二度漬け禁止！だるま・八重勝など人気店が勢揃い。' },
+      { title: '住吉大社へ初詣（1/1 元旦におすすめ！）', area: '天王寺・新世界', category: 'sightseeing', cost: 1000, memo: '大阪を代表する初詣スポット！太鼓橋を渡ってお参り＆おみくじ。' },
+      { title: '海遊館（世界最大級の水族館）', area: 'ベイエリア・USJ', category: 'sightseeing', cost: 2700, memo: 'ジンベエザメが泳ぐ大水槽は圧巻。天保山マーケットプレースも隣接。' },
+      { title: '梅田スカイビル・空中庭園展望台', area: '梅田・キタ', category: 'sightseeing', cost: 1500, memo: '夕方〜夜景の時間帯が特におすすめ。グランフロント大阪も近く。' },
+      { title: 'あべのハルカス（ハルカス300）', area: '天王寺・新世界', category: 'sightseeing', cost: 2000, memo: '地上300mの絶景展望台。デパ地下グルメも充実。' },
+      { title: '黒門市場で海鮮＆食べ歩きランチ', area: 'なんば・心斎橋', category: 'gourmet', cost: 2500, memo: '「大阪の台所」。新鮮な海鮮串や和牛ステーキなど。' },
+      { title: 'なんばグランド花月 (NGK) でお笑い鑑賞', area: 'なんば・心斎橋', category: 'sightseeing', cost: 5000, memo: '年末年始の特別興行！漫才・落語・吉本新喜劇の本場。' },
+      { title: '鶴橋コリアンタウン食べ歩き', area: '鶴橋・生野', category: 'gourmet', cost: 2000, memo: 'キンパ、チーズハットグ、最新韓国スイーツ＆コスメ探し。' },
+      { title: '新大阪駅でお土産購入（551蓬莱・りくろーおじさん）', area: '新大阪', category: 'shopping', cost: 3500, memo: '新幹線に乗る前に551の豚まんや焼きたてチーズケーキをゲット！' }
+    ];
+
+    // ユーザー確定済みの12/29〜1/2初期データ
+    function getDefaultData() {
+      return {
+        meta: {
+          title: '年末年始 大阪＆USJ・実家帰省の旅（12/29〜1/2）',
+          startDate: '2026-12-29',
+          endDate: '2027-01-02',
+          budgetTarget: 80000
+        },
+        days: [
+          {
+            id: 'day-1',
+            items: [
+              { id: 'item-101', time: '09:15', endTime: '09:34', category: 'transport', title: '大在 → 大分（JR日豊本線）', area: '大分', cost: 280, memo: '09:45〜10:01 大分駅で乗り換え待ち' },
+              { id: 'item-102', time: '10:12', endTime: '12:04', category: 'transport', title: '大分 → 博多（特急ソニック）', area: '大分〜博多', cost: 0, memo: '大分 10:12発 → 博多 12:04着' },
+              { id: 'item-103', time: '12:15', endTime: '13:30', category: 'gourmet', title: '昼食', area: '博多エリア', cost: 1500, memo: '博多駅周辺（博多めん街道やアミュプラザなど）でランチ' },
+              { id: 'item-104', time: '14:00', endTime: '16:30', category: 'sightseeing', title: '実家訪問', area: '福岡・博多', cost: 0, memo: '17:00の新幹線に合わせて博多駅へ戻る' },
+              { id: 'item-105', time: '17:00', endTime: '19:30', category: 'transport', title: '博多 → 新大阪（山陽新幹線）', area: '博多〜新大阪', cost: 0, memo: '博多 17:00発 → 新大阪 19:30着' },
+              { id: 'item-106', time: '19:45', endTime: '20:45', category: 'gourmet', title: '夕食', area: '新大阪・大阪エリア', cost: 3000, memo: '新大阪駅構内またはホテル周辺で大阪グルメ' },
+              { id: 'item-107', time: '21:00', endTime: '', category: 'hotel', title: 'ホテルチェックイン', area: '大阪', cost: 0, memo: '明日のUSJ（8:00〜）に備えて早めに就寝！' }
+            ]
+          },
+          {
+            id: 'day-2',
+            items: [
+              { id: 'item-201', time: '08:00', endTime: '19:00', category: 'sightseeing', title: 'ユニバーサル・スタジオ・ジャパン（USJ）', area: 'ユニバーサルシティ', cost: 10900, memo: '終日USJ満喫！防寒対策＆モバイルバッテリー必須' }
+            ]
+          },
+          {
+            id: 'day-3',
+            items: [
+              { id: 'item-301', time: '10:00', endTime: '17:00', category: 'sightseeing', title: '大阪観光①', area: 'なんば・心斎橋', cost: 5000, memo: '自由計画・右側のおすすめスポットから追加可能（道頓堀・黒門市場・新世界・海遊館など）' }
+            ]
+          },
+          {
+            id: 'day-4',
+            items: [
+              { id: 'item-401', time: '10:00', endTime: '', category: 'hotel', title: 'ホテルチェックアウト', area: '大阪', cost: 0, memo: '荷物は新大阪駅または主要駅のコインロッカーへ' },
+              { id: 'item-402', time: '10:30', endTime: '15:30', category: 'sightseeing', title: '大阪観光②', area: '大阪市内', cost: 4000, memo: '初詣（住吉大社）・大阪散策・お土産購入（551蓬莱・りくろーおじさん）など' },
+              { id: 'item-403', time: '16:30', endTime: '19:00', category: 'transport', title: '新大阪 → 博多（山陽新幹線）', area: '新大阪〜博多', cost: 0, memo: '時刻は目安・要調整（帰省ラッシュのため余裕をもって移動）' }
+            ]
+          },
+          {
+            id: 'day-5',
+            items: [
+              { id: 'item-501', time: '18:00', endTime: '20:42', category: 'transport', title: '博多 → 大分（特急ソニック）', area: '博多〜大分', cost: 0, memo: '博多 18:00発 → 大分 20:42着' },
+              { id: 'item-502', time: '20:54', endTime: '21:12', category: 'transport', title: '大分 → 大在（JR日豊本線）', area: '大分', cost: 280, memo: '大分 20:54発 → 大在 21:12着（お疲れさまでした！）' }
+            ]
+          }
+        ],
+        checklist: [
+          { id: 'chk-1', category: '必需品', text: 'JR特急ソニック・新幹線チケット（往復分）', checked: false },
+          { id: 'chk-2', category: '必需品', text: 'USJチケット（QRコード）＆公式アプリ準備', checked: false },
+          { id: 'chk-3', category: '必需品', text: '交通系ICカード（SUGOCA / ICOCAなど）', checked: false },
+          { id: 'chk-4', category: '必需品', text: '実家への手土産・お年賀', checked: false },
+          { id: 'chk-5', category: 'ガジェット', text: 'モバイルバッテリー・充電ケーブル（USJ必須！）', checked: false },
+          { id: 'chk-6', category: '衣類', text: '厚手のコート・マフラー・カイロ（年末年始＆海辺のUSJ防寒対策）', checked: false },
+          { id: 'chk-7', category: '衣類', text: '歩きやすいスニーカー（USJ・大阪観光用）', checked: false },
+          { id: 'chk-8', category: 'その他', text: 'エコバッグ（お土産用）・常備薬', checked: false }
+        ]
+      };
+    }
+
+    // ==========================================
+    // 2. ルームID管理 & Firebase リアルタイム同期
+    // ==========================================
+    let appState = {
+      ...getDefaultData(),
+      activeDayIndex: 0,
+      isAllDaysView: false
+    };
+    let selectedSpotArea = 'すべて';
+    let activeMobileTab = 'schedule'; // 'schedule' | 'spots' | 'budget'
+
+    function switchMobileTab(tabName) {
+      activeMobileTab = tabName;
+      applyMobileTabVisibility();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function applyMobileTabVisibility() {
+      const isMobile = window.innerWidth < 768;
+      const metaSec = document.getElementById('section-meta-summary');
+      const schedSec = document.getElementById('mobile-tab-schedule');
+      const spotsSec = document.getElementById('mobile-tab-spots');
+      const checkSec = document.getElementById('mobile-tab-checklist');
+
+      const btnSched = document.getElementById('nav-btn-schedule');
+      const btnSpots = document.getElementById('nav-btn-spots');
+      const btnBudget = document.getElementById('nav-btn-budget');
+
+      if (!isMobile) {
+        // PC幅ではすべて表示
+        metaSec?.classList.remove('hidden');
+        schedSec?.classList.remove('hidden');
+        spotsSec?.classList.remove('hidden');
+        checkSec?.classList.remove('hidden');
+        return;
+      }
+
+      // スマホ幅では選択タブに応じて表示切り替え
+      metaSec?.classList.toggle('hidden', activeMobileTab !== 'budget');
+      schedSec?.classList.toggle('hidden', activeMobileTab !== 'schedule');
+      spotsSec?.classList.toggle('hidden', activeMobileTab !== 'spots');
+      checkSec?.classList.toggle('hidden', activeMobileTab !== 'budget');
+
+      // ボトムナビのアクティブスタイル更新
+      const activeCls = 'flex-1 flex flex-col items-center justify-center py-1 rounded-xl text-osaka-600 bg-osaka-50/80 font-black transition';
+      const inactiveCls = 'flex-1 flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 hover:text-slate-800 font-bold transition';
+
+      if (btnSched) btnSched.className = activeMobileTab === 'schedule' ? activeCls : inactiveCls;
+      if (btnSpots) btnSpots.className = activeMobileTab === 'spots' ? activeCls : inactiveCls;
+      if (btnBudget) btnBudget.className = activeMobileTab === 'budget' ? activeCls : inactiveCls;
+    }
+
+    window.addEventListener('resize', applyMobileTabVisibility);
+
+    function resolveRoomId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let id = urlParams.get('room');
+      if (!id && window.location.hash.startsWith('#room=')) {
+        id = window.location.hash.replace('#room=', '').trim();
+      }
+      if (!id) {
+        id = 'osaka-' + Math.random().toString(36).substring(2, 8);
+        try {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('room', id);
+          window.history.replaceState({}, '', newUrl.toString());
+        } catch (e) {
+          window.location.hash = 'room=' + id;
+        }
+      }
+      return id;
+    }
+
+    function getShareableUrl() {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', roomId);
+        return url.toString();
+      } catch (e) {
+        return `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+      }
+    }
+
+    function setSyncStatus(status, text) {
+      const dot = document.getElementById('sync-status-dot');
+      const label = document.getElementById('sync-status-text');
+      if (!dot || !label) return;
+
+      label.textContent = text;
+      dot.className = 'w-2 h-2 rounded-full ' + (
+        status === 'synced' ? 'bg-emerald-400' :
+        status === 'saving' ? 'bg-amber-300 animate-ping' :
+        status === 'error'  ? 'bg-red-400' : 'bg-amber-300 animate-pulse'
+      );
+    }
+
+    async function initFirebaseSync() {
+      roomId = resolveRoomId();
+      updateShareModalLinks();
+
+      if (!firebaseConfig) {
+        setSyncStatus('error', 'オフラインモード');
+        renderAll();
+        return;
+      }
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        setSyncStatus('connecting', 'クラウド接続中...');
+
+        // RULE 3: Auth Before Queries
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        // RULE 1: Strict Paths (/artifacts/{appId}/public/data/{collectionName}/{documentId})
+        const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', roomId);
+
+        unsubscribeRoom = onSnapshot(roomDocRef, async (snapshot) => {
+          if (snapshot.exists()) {
+            const remoteData = snapshot.data();
+            isRemoteUpdate = true;
+            appState = {
+              meta: remoteData.meta || getDefaultData().meta,
+              days: Array.isArray(remoteData.days) ? remoteData.days : getDefaultData().days,
+              checklist: Array.isArray(remoteData.checklist) ? remoteData.checklist : getDefaultData().checklist,
+              activeDayIndex: Math.min(appState.activeDayIndex || 0, Math.max(0, (remoteData.days?.length || 1) - 1)),
+              isAllDaysView: appState.isAllDaysView || false
+            };
+            renderAll();
+            setSyncStatus('synced', 'リアルタイム同期中');
+            isRemoteUpdate = false;
+          } else {
+            // 初回ルーム作成時は確定スケジュールを自動保存
+            setSyncStatus('saving', '初期データ作成中...');
+            const initialData = getDefaultData();
+            appState = {
+              ...initialData,
+              activeDayIndex: 0,
+              isAllDaysView: false
+            };
+            await setDoc(roomDocRef, {
+              meta: initialData.meta,
+              days: initialData.days,
+              checklist: initialData.checklist,
+              updatedAt: Date.now()
+            });
+            renderAll();
+            setSyncStatus('synced', 'リアルタイム同期中');
+          }
+        }, (error) => {
+          console.error('Firestore onSnapshot error:', error);
+          setSyncStatus('error', '同期エラー（再読込してください）');
+          showToast('クラウド同期でエラーが発生しました');
+        });
+      } catch (err) {
+        console.error('Firebase init error:', err);
+        setSyncStatus('error', '接続失敗');
+        renderAll();
+      }
+    }
+
+    async function saveState() {
+      renderAll();
+      if (isRemoteUpdate) return;
+      if (!db || !currentUser || !roomId) return;
+
+      try {
+        setSyncStatus('saving', '保存中...');
+        const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', roomId);
+        await setDoc(roomDocRef, {
+          meta: appState.meta,
+          days: appState.days,
+          checklist: appState.checklist,
+          updatedAt: Date.now()
+        });
+        setSyncStatus('synced', 'リアルタイム同期中');
+      } catch (e) {
+        console.error('Failed to save to Firestore:', e);
+        setSyncStatus('error', '保存エラー');
+        showToast('クラウドへの保存に失敗しました');
+      }
+    }
+
+    // ==========================================
+    // 3. レンダリング関数群
+    // ==========================================
+    function renderAll() {
+      renderMetaAndStats();
+      renderDayTabs();
+      renderScheduleArea();
+      renderRecommendedSpots();
+      renderChecklist();
+      renderPrintView();
+      applyMobileTabVisibility();
+      lucide.createIcons();
+    }
+
+    function renderMetaAndStats() {
+      // メタ情報入力欄へ反映
+      document.getElementById('trip-title').value = appState.meta.title || '';
+      document.getElementById('trip-start-date').value = appState.meta.startDate || '';
+      document.getElementById('trip-end-date').value = appState.meta.endDate || '';
+      document.getElementById('trip-budget-target').value = appState.meta.budgetTarget || '';
+
+      // 統計計算
+      const totalDays = appState.days.length;
+      let totalSpots = 0;
+      let totalCost = 0;
+
+      appState.days.forEach(day => {
+        totalSpots += day.items.length;
+        day.items.forEach(item => {
+          totalCost += Number(item.cost) || 0;
+        });
+      });
+
+      const totalChecks = appState.checklist.length;
+      const doneChecks = appState.checklist.filter(c => c.checked).length;
+      const checkPct = totalChecks === 0 ? 0 : Math.round((doneChecks / totalChecks) * 100);
+
+      document.getElementById('stat-days').textContent = totalDays;
+      document.getElementById('stat-spots').textContent = totalSpots;
+      document.getElementById('stat-cost').textContent = `¥${totalCost.toLocaleString()}`;
+
+      // スマホ用ミニステータスバー更新
+      const miniTitle = document.getElementById('mobile-mini-title');
+      const miniCost = document.getElementById('mobile-mini-cost');
+      const miniCheck = document.getElementById('mobile-mini-check');
+      if (miniTitle) miniTitle.textContent = appState.meta.title || '大阪旅行 旅のしおり';
+      if (miniCost) miniCost.textContent = `¥${totalCost.toLocaleString()}`;
+      if (miniCheck) miniCheck.textContent = `${checkPct}%`;
+
+      // 目標予算との差額表示
+      const budgetTarget = Number(appState.meta.budgetTarget) || 0;
+      const diffEl = document.getElementById('stat-budget-diff');
+      if (budgetTarget > 0) {
+        const diff = budgetTarget - totalCost;
+        if (diff >= 0) {
+          diffEl.textContent = `目標まであと ¥${diff.toLocaleString()}`;
+          diffEl.className = 'text-[11px] font-bold text-emerald-600';
+        } else {
+          diffEl.textContent = `予算オーバー +¥${Math.abs(diff).toLocaleString()}`;
+          diffEl.className = 'text-[11px] font-bold text-red-500';
+        }
+      } else {
+        diffEl.textContent = '';
+      }
+
+      document.getElementById('stat-checklist-pct').textContent = `${checkPct}%`;
+      document.getElementById('stat-checklist-bar').style.width = `${checkPct}%`;
+      document.getElementById('checklist-count-badge').textContent = `${doneChecks} / ${totalChecks}`;
+    }
+
+    function renderDayTabs() {
+      const container = document.getElementById('day-tabs');
+      container.innerHTML = '';
+
+      appState.days.forEach((day, idx) => {
+        const isActive = !appState.isAllDaysView && idx === appState.activeDayIndex;
+        const dateLabel = getFormattedDayDate(idx);
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          appState.isAllDaysView = false;
+          appState.activeDayIndex = idx;
+          renderAll();
+        };
+        btn.className = isActive
+          ? 'flex items-center gap-1 bg-osaka-500 text-white font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-sm transition shrink-0'
+          : 'flex items-center gap-1 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition shrink-0';
+
+        btn.innerHTML = `
+          <span class="font-display text-xs sm:text-sm">${dateLabel ? dateLabel.split('(')[0] : `DAY ${idx + 1}`}</span>
+          <span class="hidden sm:inline text-[11px] ${isActive ? 'text-osaka-100' : 'text-slate-400'} font-medium">DAY${idx + 1}</span>
+        `;
+        container.appendChild(btn);
+      });
+
+      // 全日程一覧ボタンのアクティブ状態更新
+      const allBtn = document.getElementById('btn-all-days-view');
+      if (appState.isAllDaysView) {
+        allBtn.className = 'flex items-center gap-1 text-[11px] sm:text-xs font-bold bg-slate-800 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-sm transition';
+      } else {
+        allBtn.className = 'flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-600 hover:bg-slate-100 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition';
+      }
+
+      const targetDate = getFormattedDayDate(appState.activeDayIndex);
+      document.getElementById('quick-add-target-day').textContent = `DAY ${appState.activeDayIndex + 1} ${targetDate ? `(${targetDate})` : ''}`;
+    }
+
+    function toggleAllDaysView() {
+      appState.isAllDaysView = !appState.isAllDaysView;
+      renderAll();
+    }
+
+    function getFormattedDayDate(dayIndex) {
+      if (!appState.meta.startDate) return '';
+      try {
+        const base = new Date(appState.meta.startDate + 'T00:00:00');
+        base.setDate(base.getDate() + dayIndex);
+        const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+        return `${base.getMonth() + 1}/${base.getDate()}(${weekdays[base.getDay()]})`;
+      } catch {
+        return '';
+      }
+    }
+
+    function renderScheduleArea() {
+      const singleHeader = document.getElementById('single-day-header');
+      const singleList = document.getElementById('itinerary-list');
+      const allViewContainer = document.getElementById('all-days-view-container');
+
+      if (appState.isAllDaysView) {
+        singleHeader.classList.add('hidden');
+        singleList.classList.add('hidden');
+        allViewContainer.classList.remove('hidden');
+        renderAllDaysInteractiveView(allViewContainer);
+      } else {
+        singleHeader.classList.remove('hidden');
+        singleList.classList.remove('hidden');
+        allViewContainer.classList.add('hidden');
+        renderCurrentDaySchedule();
+      }
+    }
+
+    function renderAllDaysInteractiveView(container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-black text-slate-800">全日程タイムライン一覧</h2>
+            <p class="text-xs text-slate-500">各日程をクリックすると個別の編集画面へ移動します</p>
+          </div>
+        </div>
+      `;
+
+      appState.days.forEach((day, dIdx) => {
+        const dateLabel = getFormattedDayDate(dIdx);
+        const dayCost = day.items.reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
+
+        const dayBlock = document.createElement('div');
+        dayBlock.className = 'bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 space-y-3';
+        dayBlock.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="bg-osaka-500 text-white text-xs font-black px-2.5 py-1 rounded-lg font-display">DAY ${dIdx + 1}</span>
+              <span class="font-black text-slate-800 text-sm sm:text-base">${dateLabel || `${dIdx + 1}日目`}</span>
+              <span class="text-xs font-bold text-slate-400">¥${dayCost.toLocaleString()}</span>
+            </div>
+            <button onclick="switchToDayAndAdd(${dIdx})" class="text-xs font-bold text-osaka-600 hover:bg-osaka-100/60 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+              <span>この日を編集</span>
+            </button>
+          </div>
+        `;
+
+        if (day.items.length === 0) {
+          dayBlock.innerHTML += `<p class="text-xs text-slate-400 py-2 pl-2">予定なし</p>`;
+        } else {
+          const itemsWrap = document.createElement('div');
+          itemsWrap.className = 'space-y-2';
+          day.items.forEach(item => {
+            const cat = CATEGORIES[item.category] || CATEGORIES.other;
+            const timeDisp = item.endTime ? `${item.time}〜${item.endTime}` : item.time;
+            const row = document.createElement('div');
+            row.className = 'bg-white rounded-xl p-3 border border-slate-200/60 flex items-start justify-between gap-3';
+            row.innerHTML = `
+              <div class="flex items-start gap-2.5 min-w-0">
+                <span class="font-display font-extrabold text-xs text-slate-700 bg-slate-100 px-2 py-1 rounded-md shrink-0 mt-0.5">${escapeHtml(timeDisp)}</span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${cat.badgeBg}">${cat.label}</span>
+                    <span class="font-bold text-xs sm:text-sm text-slate-800">${escapeHtml(item.title)}</span>
+                  </div>
+                  ${item.memo ? `<p class="text-[11px] text-slate-500 mt-1">${escapeHtml(item.memo)}</p>` : ''}
+                </div>
+              </div>
+              ${Number(item.cost) > 0 ? `<span class="font-display font-bold text-xs text-osaka-600 shrink-0">¥${Number(item.cost).toLocaleString()}</span>` : ''}
+            `;
+            itemsWrap.appendChild(row);
+          });
+          dayBlock.appendChild(itemsWrap);
+        }
+
+        container.appendChild(dayBlock);
+      });
+    }
+
+    function switchToDayAndAdd(dayIndex) {
+      appState.isAllDaysView = false;
+      appState.activeDayIndex = dayIndex;
+      renderAll();
+    }
+
+    function renderCurrentDaySchedule() {
+      const dayIdx = appState.activeDayIndex;
+      const day = appState.days[dayIdx];
+      if (!day) return;
+
+      const dateLabel = getFormattedDayDate(dayIdx);
+      document.getElementById('current-day-badge').textContent = `DAY ${dayIdx + 1}`;
+      document.getElementById('current-day-title').textContent = `${dayIdx + 1}日目のスケジュール ${dateLabel ? `(${dateLabel})` : ''}`;
+
+      const dayCost = day.items.reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
+      document.getElementById('current-day-subtotal').textContent = `この日の予定費用: ¥${dayCost.toLocaleString()}（${day.items.length}件）`;
+
+      // 日程が2日以上ある場合のみ削除ボタンを表示
+      const delDayBtn = document.getElementById('btn-delete-day');
+      if (appState.days.length > 1) {
+        delDayBtn.classList.remove('hidden');
+      } else {
+        delDayBtn.classList.add('hidden');
+      }
+
+      const listEl = document.getElementById('itinerary-list');
+      listEl.innerHTML = '';
+
+      if (day.items.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-12 px-4 bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-200">
+            <div class="w-12 h-12 bg-white rounded-2xl shadow-xs flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <i data-lucide="calendar-plus" class="w-6 h-6"></i>
+            </div>
+            <p class="font-bold text-slate-700 text-sm">まだ予定が入っていません</p>
+            <p class="text-xs text-slate-500 mt-1">右上の「予定を追加」ボタン、または「大阪おすすめスポット」から追加してみましょう！</p>
+          </div>
+        `;
+        return;
+      }
+
+      day.items.forEach((item, index) => {
+        const cat = CATEGORIES[item.category] || CATEGORIES.other;
+        const timeDisp = item.endTime ? `${item.time}〜${item.endTime}` : (item.time || '--:--');
+        const card = document.createElement('div');
+        // スマホでは左余白をスリム化し、1画面に4〜5件入るコンパクト高さに調整
+        card.className = 'timeline-item relative pl-6 md:pl-9';
+
+        card.innerHTML = `
+          <div class="timeline-line">
+            <!-- タイムラインのドット -->
+            <div class="absolute left-1.5 md:left-2.5 top-3 md:top-3.5 w-2.5 h-2.5 md:w-4 md:h-4 rounded-full ${cat.dotBg} ring-2 md:ring-4 ring-white shadow-2xs z-10"></div>
+          </div>
+
+          <div class="group bg-slate-50/80 hover:bg-white rounded-xl md:rounded-2xl border border-slate-200/80 hover:border-osaka-300 px-2.5 py-2 md:p-4 transition shadow-2xs hover:shadow-sm">
+            <!-- 1行目：時間・カテゴリーバッジ・操作アイコンを1行に凝縮 -->
+            <div class="flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span class="font-display font-extrabold text-xs md:text-sm text-slate-800 bg-white px-1.5 md:px-2.5 py-0.5 rounded-md md:rounded-lg border border-slate-200/80 shrink-0">
+                  ${escapeHtml(timeDisp)}
+                </span>
+                <span class="inline-flex items-center gap-1 text-[10px] md:text-xs font-bold px-1.5 md:px-2.5 py-0.5 rounded-md md:rounded-lg border shrink-0 ${cat.badgeBg}">
+                  <i data-lucide="${cat.icon}" class="w-3 h-3 md:w-3.5 md:h-3.5"></i>
+                  ${cat.label}
+                </span>
+                ${item.area ? `
+                  <span class="inline-flex items-center gap-0.5 text-[10px] md:text-xs font-medium text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200/60 truncate max-w-[110px] md:max-w-none">
+                    <i data-lucide="map-pin" class="w-2.5 h-2.5 md:w-3 md:h-3 text-osaka-500 shrink-0"></i>
+                    <span class="truncate">${escapeHtml(item.area)}</span>
+                  </span>
+                ` : ''}
+              </div>
+
+              <!-- 操作ボタン（スマホでも1行右端にスリム配置） -->
+              <div class="flex items-center gap-0.5 md:gap-1 shrink-0 no-print">
+                <button onclick="moveItem(${index}, -1)" ${index === 0 ? 'disabled' : ''}
+                  class="p-1 md:p-1.5 rounded-md md:rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 disabled:opacity-25 transition" title="上へ移動">
+                  <i data-lucide="chevron-up" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>
+                </button>
+                <button onclick="moveItem(${index}, 1)" ${index === day.items.length - 1 ? 'disabled' : ''}
+                  class="p-1 md:p-1.5 rounded-md md:rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 disabled:opacity-25 transition" title="下へ移動">
+                  <i data-lucide="chevron-down" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>
+                </button>
+                <button onclick="openItemModal('${item.id}')"
+                  class="p-1 md:p-1.5 rounded-md md:rounded-lg text-slate-400 hover:text-osaka-600 hover:bg-osaka-50 transition" title="編集">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>
+                </button>
+                <button onclick="deleteItem('${item.id}')"
+                  class="p-1 md:p-1.5 rounded-md md:rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition" title="削除">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2行目：タイトルと金額を横並びでスッキリ表示 -->
+            <div class="mt-1 md:mt-2 flex items-baseline justify-between gap-2">
+              <h3 class="font-black text-slate-800 text-xs sm:text-sm md:text-base leading-snug">${escapeHtml(item.title)}</h3>
+              ${Number(item.cost) > 0 ? `
+                <span class="font-display font-bold text-xs md:text-sm text-osaka-600 shrink-0">
+                  ¥${Number(item.cost).toLocaleString()}
+                </span>
+              ` : ''}
+            </div>
+
+            <!-- 3行目：メモがある場合はスマホでは1行コンパクト表示（タップで全文展開） -->
+            ${item.memo ? `
+              <p onclick="this.classList.toggle('line-clamp-1')" title="タップで開閉"
+                class="mt-1 md:mt-2 text-[11px] md:text-xs text-slate-500 md:text-slate-600 bg-white/80 rounded-lg px-2 py-1 md:p-2.5 border border-slate-100 leading-relaxed line-clamp-1 md:line-clamp-none cursor-pointer">
+                ${escapeHtml(item.memo)}
+              </p>
+            ` : ''}
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function renderRecommendedSpots() {
+      const areas = ['すべて', 'なんば・心斎橋', '梅田・キタ', 'ベイエリア・USJ', '天王寺・新世界', '大阪城・京橋', '鶴橋・生野'];
+      const filterContainer = document.getElementById('spot-area-filters');
+      filterContainer.innerHTML = '';
+
+      areas.forEach(area => {
+        const active = selectedSpotArea === area;
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          selectedSpotArea = area;
+          renderRecommendedSpots();
+          lucide.createIcons();
+        };
+        btn.className = active
+          ? 'text-xs font-bold bg-slate-800 text-white px-3 py-1.5 rounded-full shrink-0 transition'
+          : 'text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full shrink-0 transition';
+        btn.textContent = area;
+        filterContainer.appendChild(btn);
+      });
+
+      const listContainer = document.getElementById('recommended-spots-list');
+      listContainer.innerHTML = '';
+
+      const filtered = selectedSpotArea === 'すべて'
+        ? RECOMMENDED_SPOTS
+        : RECOMMENDED_SPOTS.filter(s => s.area === selectedSpotArea);
+
+      filtered.forEach((spot, idx) => {
+        const cat = CATEGORIES[spot.category] || CATEGORIES.other;
+        const el = document.createElement('div');
+        el.className = 'flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-osaka-50/40 hover:border-osaka-200 transition';
+
+        el.innerHTML = `
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${cat.badgeBg}">${cat.label}</span>
+              <span class="text-[11px] text-slate-400 truncate">${spot.area}</span>
+            </div>
+            <p class="font-bold text-xs sm:text-sm text-slate-800 truncate">${spot.title}</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">目安: ¥${spot.cost.toLocaleString()}</p>
+          </div>
+          <button onclick="quickAddSpot(${RECOMMENDED_SPOTS.indexOf(spot)})"
+            class="shrink-0 flex items-center gap-1 bg-white hover:bg-osaka-500 text-osaka-600 hover:text-white border border-osaka-200 hover:border-osaka-500 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>追加</span>
+          </button>
+        `;
+        listContainer.appendChild(el);
+      });
+    }
+
+    function renderChecklist() {
+      const container = document.getElementById('checklist-container');
+      container.innerHTML = '';
+
+      if (appState.checklist.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">チェックリストは空です</p>`;
+        return;
+      }
+
+      const groups = {};
+      appState.checklist.forEach(item => {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+      });
+
+      Object.keys(groups).forEach(catName => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'space-y-1.5';
+        groupDiv.innerHTML = `<h4 class="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">${escapeHtml(catName)}</h4>`;
+
+        groups[catName].forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-slate-50 group transition';
+          row.innerHTML = `
+            <label class="flex items-center gap-2.5 flex-1 cursor-pointer select-none min-w-0">
+              <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleChecklist('${item.id}')"
+                class="w-4 h-4 rounded-md accent-osaka-500 cursor-pointer shrink-0">
+              <span class="text-xs sm:text-sm truncate ${item.checked ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}">
+                ${escapeHtml(item.text)}
+              </span>
+            </label>
+            <button onclick="deleteChecklist('${item.id}')" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 p-1 transition" title="削除">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          `;
+          groupDiv.appendChild(row);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // 印刷時に全日程が綺麗に出力されるようにする
+    function renderPrintView() {
+      const container = document.getElementById('print-all-days-container');
+      container.innerHTML = '<hr class="border-slate-300"><h3 class="font-black text-base text-slate-800">【全日程スケジュール一覧】</h3>';
+
+      appState.days.forEach((day, idx) => {
+        const dateLabel = getFormattedDayDate(idx);
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'print-break-inside-avoid border border-slate-300 rounded-xl p-4 space-y-2';
+        dayDiv.innerHTML = `<h4 class="font-black text-sm bg-slate-100 px-3 py-1.5 rounded-lg">DAY ${idx + 1} ${dateLabel}</h4>`;
+
+        if (day.items.length === 0) {
+          dayDiv.innerHTML += `<p class="text-xs text-slate-500 px-2">予定なし</p>`;
+        } else {
+          const ul = document.createElement('div');
+          ul.className = 'divide-y divide-slate-200';
+          day.items.forEach(item => {
+            const timeDisp = item.endTime ? `${item.time}〜${item.endTime}` : item.time;
+            ul.innerHTML += `
+              <div class="py-2 px-2 flex justify-between items-start gap-4 text-xs">
+                <div>
+                  <span class="font-bold mr-2">${escapeHtml(timeDisp)}</span>
+                  <span class="font-bold text-slate-900">${escapeHtml(item.title)}</span>
+                  ${item.area ? `<span class="text-slate-500 ml-1">(${escapeHtml(item.area)})</span>` : ''}
+                  ${item.memo ? `<p class="text-slate-600 mt-0.5 pl-11">${escapeHtml(item.memo)}</p>` : ''}
+                </div>
+                <span class="font-bold shrink-0">${Number(item.cost) > 0 ? '¥' + Number(item.cost).toLocaleString() : ''}</span>
+              </div>
+            `;
+          });
+          dayDiv.appendChild(ul);
+        }
+        container.appendChild(dayDiv);
+      });
+    }
+
+    // ==========================================
+    // 4. ユーザー操作ハンドラー & LINE共有機能
+    // ==========================================
+    function updateShareModalLinks() {
+      const shareUrl = getShareableUrl();
+      const roomLabel = document.getElementById('share-room-id-label');
+      const urlInput = document.getElementById('share-url-input');
+      const lineLink = document.getElementById('line-share-direct-link');
+
+      if (roomLabel) roomLabel.textContent = roomId || '';
+      if (urlInput) urlInput.value = shareUrl;
+      if (lineLink) {
+        const title = appState.meta?.title || '大阪旅行 旅のしおり';
+        const message = `🐙 ${title}\n一緒に旅のしおりを編集しよう！👇\n${shareUrl}`;
+        lineLink.href = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
+      }
+    }
+
+    function openShareModal() {
+      updateShareModalLinks();
+      const modal = document.getElementById('share-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeShareModal() {
+      const modal = document.getElementById('share-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function copyShareUrl() {
+      const shareUrl = getShareableUrl();
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('共同編集リンクをコピーしました！LINEに貼り付けて送れます');
+      } catch (err) {
+        showToast('リンクのコピーに失敗しました');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function updateMeta(key, value) {
+      appState.meta[key] = value;
+      saveState();
+    }
+
+    function addDay() {
+      const newDayNum = appState.days.length + 1;
+      appState.days.push({
+        id: 'day-' + Date.now(),
+        items: []
+      });
+      appState.activeDayIndex = appState.days.length - 1;
+      saveState();
+      showToast(`DAY ${newDayNum} を追加しました！`);
+    }
+
+    function deleteCurrentDay() {
+      if (appState.days.length <= 1) return;
+      const deletedNum = appState.activeDayIndex + 1;
+      appState.days.splice(appState.activeDayIndex, 1);
+      appState.activeDayIndex = Math.max(0, appState.activeDayIndex - 1);
+      saveState();
+      showToast(`DAY ${deletedNum} を削除しました`);
+    }
+
+    // モーダル制御（予定の追加・編集）
+    function openItemModal(itemId = null) {
+      const modal = document.getElementById('item-modal');
+      const form = document.getElementById('item-form');
+      form.reset();
+
+      if (itemId) {
+        const day = appState.days[appState.activeDayIndex];
+        const item = day.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        document.getElementById('modal-title').textContent = '予定を編集';
+        document.getElementById('edit-item-id').value = item.id;
+        document.getElementById('item-time').value = item.time;
+        document.getElementById('item-end-time').value = item.endTime || '';
+        document.getElementById('item-category').value = item.category;
+        document.getElementById('item-title').value = item.title;
+        document.getElementById('item-area').value = item.area || '';
+        document.getElementById('item-cost').value = item.cost || '';
+        document.getElementById('item-memo').value = item.memo || '';
+      } else {
+        document.getElementById('modal-title').textContent = `DAY ${appState.activeDayIndex + 1} に予定を追加`;
+        document.getElementById('edit-item-id').value = '';
+        document.getElementById('item-end-time').value = '';
+        // 最後の予定の1時間後をデフォルト時間に設定
+        const day = appState.days[appState.activeDayIndex];
+        if (day.items.length > 0) {
+          const lastTime = day.items[day.items.length - 1].endTime || day.items[day.items.length - 1].time;
+          if (lastTime && lastTime.includes(':')) {
+            let [h, m] = lastTime.split(':').map(Number);
+            h = (h + 1) % 24;
+            document.getElementById('item-time').value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          }
+        } else {
+          document.getElementById('item-time').value = '10:00';
+        }
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeItemModal() {
+      const modal = document.getElementById('item-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveScheduleItem(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-item-id').value;
+      const newItemData = {
+        id: editId || 'item-' + Date.now(),
+        time: document.getElementById('item-time').value,
+        endTime: document.getElementById('item-end-time').value || '',
+        category: document.getElementById('item-category').value,
+        title: document.getElementById('item-title').value.trim(),
+        area: document.getElementById('item-area').value.trim(),
+        cost: Number(document.getElementById('item-cost').value) || 0,
+        memo: document.getElementById('item-memo').value.trim()
+      };
+
+      const day = appState.days[appState.activeDayIndex];
+      if (editId) {
+        const idx = day.items.findIndex(i => i.id === editId);
+        if (idx !== -1) day.items[idx] = newItemData;
+        showToast('予定を更新しました');
+      } else {
+        day.items.push(newItemData);
+        // 時間順に自動ソート
+        day.items.sort((a, b) => a.time.localeCompare(b.time));
+        showToast('新しい予定を追加しました！');
+      }
+
+      closeItemModal();
+      saveState();
+    }
+
+    function deleteItem(itemId) {
+      const day = appState.days[appState.activeDayIndex];
+      day.items = day.items.filter(i => i.id !== itemId);
+      saveState();
+      showToast('予定を削除しました');
+    }
+
+    function moveItem(index, direction) {
+      const day = appState.days[appState.activeDayIndex];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= day.items.length) return;
+
+      const temp = day.items[index];
+      day.items[index] = day.items[targetIndex];
+      day.items[targetIndex] = temp;
+      saveState();
+    }
+
+    // おすすめスポットからのクイック追加
+    function quickAddSpot(spotIndex) {
+      const spot = RECOMMENDED_SPOTS[spotIndex];
+      if (!spot) return;
+
+      const day = appState.days[appState.activeDayIndex];
+      let nextTime = '12:00';
+      if (day.items.length > 0) {
+        const lastTime = day.items[day.items.length - 1].time;
+        if (lastTime && lastTime.includes(':')) {
+          let [h, m] = lastTime.split(':').map(Number);
+          h = Math.min(23, h + 2);
+          nextTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+      }
+
+      day.items.push({
+        id: 'item-' + Date.now(),
+        time: nextTime,
+        endTime: '',
+        category: spot.category,
+        title: spot.title,
+        area: spot.area,
+        cost: spot.cost,
+        memo: spot.memo
+      });
+
+      saveState();
+      showToast(`DAY ${appState.activeDayIndex + 1} に「${spot.title}」を追加しました！`);
+      if (window.innerWidth < 768) {
+        switchMobileTab('schedule');
+      }
+    }
+
+    // チェックリスト操作
+    function handleAddChecklist(e) {
+      e.preventDefault();
+      const cat = document.getElementById('new-check-category').value;
+      const input = document.getElementById('new-check-text');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appState.checklist.push({
+        id: 'chk-' + Date.now(),
+        category: cat,
+        text: text,
+        checked: false
+      });
+
+      input.value = '';
+      saveState();
+      showToast('持ち物リストに追加しました');
+    }
+
+    function toggleChecklist(id) {
+      const item = appState.checklist.find(c => c.id === id);
+      if (item) {
+        item.checked = !item.checked;
+        saveState();
+      }
+    }
+
+    function deleteChecklist(id) {
+      appState.checklist = appState.checklist.filter(c => c.id !== id);
+      saveState();
+    }
+
+    // リセットモーダル制御
+    function openResetModal() {
+      const modal = document.getElementById('reset-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeResetModal() {
+      const modal = document.getElementById('reset-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function restoreSampleData() {
+      const def = getDefaultData();
+      appState.meta = def.meta;
+      appState.days = def.days;
+      appState.checklist = def.checklist;
+      appState.activeDayIndex = 0;
+      closeResetModal();
+      saveState();
+      showToast('12/29〜1/2の確定プランに戻しました');
+    }
+
+    function clearAllData() {
+      appState.meta = {
+        title: '私の大阪旅行プラン',
+        startDate: '2026-12-29',
+        endDate: '2027-01-02',
+        budgetTarget: 50000
+      };
+      appState.activeDayIndex = 0;
+      appState.days = [{ id: 'day-' + Date.now(), items: [] }];
+      appState.checklist = [
+        { id: 'chk-1', category: '必需品', text: 'チケット・予約確認書', checked: false },
+        { id: 'chk-2', category: '必需品', text: '財布・交通系ICカード', checked: false },
+        { id: 'chk-3', category: 'ガジェット', text: 'スマホ・充電器', checked: false }
+      ];
+      closeResetModal();
+      saveState();
+      showToast('白紙の状態にリセットしました');
+    }
+
+    // LINE等で共有できるテキスト形式コピー
+    function copyItineraryText() {
+      let text = `🐙 ${appState.meta.title || '大阪旅行 旅のしおり'} 🐙\n`;
+      if (appState.meta.startDate || appState.meta.endDate) {
+        text += `📅 日程: ${appState.meta.startDate || '?'} 〜 ${appState.meta.endDate || '?'}\n`;
+      }
+      text += `🔗 共同編集リンク:\n${getShareableUrl()}\n`;
+      text += `━━━━━━━━━━━━━━\n\n`;
+
+      let grandTotal = 0;
+      appState.days.forEach((day, idx) => {
+        const dateStr = getFormattedDayDate(idx);
+        text += `【DAY ${idx + 1} ${dateStr}】\n`;
+        if (day.items.length === 0) {
+          text += `  （予定なし）\n`;
+        } else {
+          day.items.forEach(item => {
+            const timeDisp = item.endTime ? `${item.time}〜${item.endTime}` : item.time;
+            const costStr = Number(item.cost) > 0 ? ` [¥${Number(item.cost).toLocaleString()}]` : '';
+            text += `・${timeDisp} ${item.title}${costStr}\n`;
+            if (item.memo) {
+              text += `   └ ${item.memo.replace(/\n/g, ' ')}\n`;
+            }
+            grandTotal += Number(item.cost) || 0;
+          });
+        }
+        text += `\n`;
+      });
+
+      text += `━━━━━━━━━━━━━━\n`;
+      text += `💰 予定費用合計: ¥${grandTotal.toLocaleString()}`;
+
+      // iFrame環境でも確実に動作するexecCommand('copy')を使用
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('しおりのテキスト＆共有リンクをコピーしました！');
+      } catch (err) {
+        showToast('コピーに失敗しました');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // グローバルスコープへ公開（HTMLのonclick属性から呼び出すため）
+    window.openShareModal = openShareModal;
+    window.closeShareModal = closeShareModal;
+    window.copyShareUrl = copyShareUrl;
+    window.copyItineraryText = copyItineraryText;
+    window.openResetModal = openResetModal;
+    window.closeResetModal = closeResetModal;
+    window.restoreSampleData = restoreSampleData;
+    window.clearAllData = clearAllData;
+    window.updateMeta = updateMeta;
+    window.toggleAllDaysView = toggleAllDaysView;
+    window.addDay = addDay;
+    window.deleteCurrentDay = deleteCurrentDay;
+    window.openItemModal = openItemModal;
+    window.closeItemModal = closeItemModal;
+    window.saveScheduleItem = saveScheduleItem;
+    window.deleteItem = deleteItem;
+    window.moveItem = moveItem;
+    window.switchToDayAndAdd = switchToDayAndAdd;
+    window.switchMobileTab = switchMobileTab;
+    window.quickAddSpot = quickAddSpot;
+    window.handleAddChecklist = handleAddChecklist;
+    window.toggleChecklist = toggleChecklist;
+    window.deleteChecklist = deleteChecklist;
+
+    // ==========================================
+    // 5. ユーティリティ
+    // ==========================================
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-800 text-white text-xs sm:text-sm font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0';
+      toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 初期化実行
+    window.addEventListener('DOMContentLoaded', () => {
+      initFirebaseSync();
+    });
+  </script>
+</body>
+</html>
